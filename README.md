@@ -6,7 +6,7 @@
 
 ![preview](preview.png)
 
-> 截图待补：插件加载后宠物悬浮于 composer 上方的效果。
+五只宠物同屏实拍：idle / running（思考中）/ waiting（需要输入）/ review（就绪）/ failed（已阻塞），由 `preview.html` 实时渲染截图，动画与插件本体完全一致。
 
 ## 特性
 
