@@ -29,8 +29,8 @@
 
 1. 克隆本仓库到任意位置：
    ```bash
-   git clone https://github.com/你的用户名/codex-pet.git
-   cd codex-pet
+   git clone https://github.com/62652098hg/dsh-codex-pet.git
+   cd dsh-codex-pet
    ```
 2. 在 DSH profile 里注册依赖与 bundle（编辑 `~/.dsh/profiles/desktop/package.json`）：
    ```json
