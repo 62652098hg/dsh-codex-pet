@@ -25,7 +25,36 @@
 
 ## 安装
 
-### 方式一：本地目录 + pnpm link（推荐）
+### 方式一：npm 安装（推荐）
+
+在 DSH profile 的 `package.json` 里把包名加进依赖与 bundles（编辑 `~/.dsh/profiles/desktop/package.json`）：
+
+```json
+{
+  "dependencies": {
+    "dsh-codex-pet-community": "^1.0.0"
+  },
+  "dsh": {
+    "profile": {
+      "bundles": [
+        "dsh-codex-pet-community"
+      ]
+    }
+  }
+}
+```
+
+然后安装并重启 DSH：
+
+```bash
+cd ~/.dsh/profiles/desktop && pnpm install
+```
+
+重启 DSH，宠物出现在输入框上方。
+
+> npm 包地址：https://www.npmjs.com/package/dsh-codex-pet-community
+
+### 方式二：本地目录 + pnpm link（适合改代码调试）
 
 1. 克隆本仓库到任意位置：
    ```bash
@@ -53,7 +82,7 @@
    ```
    重启 DSH，宠物出现在输入框上方。
 
-### 方式二：单文件手动注入
+### 方式三：单文件手动注入
 
 `client.js` 是自包含的 client bundle，任何支持 `window.__ModuleLoader__.load({id, factory})` 注入的 DSH 环境均可直接加载。
 
@@ -61,7 +90,7 @@
 
 ```
 DSH 启动
-  └─ 扫描 profile bundles → 发现 @local/codex-pet 声明 dsh.client
+  └─ 扫描 profile bundles → 发现 dsh-codex-pet-community 声明 dsh.client
       └─ 将 client.js 组合进 client combo 注入 web 页面
           └─ window.__ModuleLoader__.load({ id, factory })
               └─ 注册 shell.overlay slot
