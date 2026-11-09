@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Codex 桌宠预览</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 28px; background: #1c1c22; color: #e8e8ef;
+    font: 14px/1.7 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  }
+  h1 { font-size: 18px; margin: 0 0 4px; }
+  .sub { color: #9a9ab0; font-size: 12px; margin-bottom: 22px; }
+  .stage {
+    display: flex; flex-wrap: wrap; align-items: flex-end; gap: 24px;
+    background: #26262e; border: 1px solid #3a3a46; border-radius: 14px;
+    padding: 22px; min-height: 150px; margin-bottom: 20px;
+  }
+  .pet-cell { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+  .pet-label { font-size: 12px; color: #b8b8cc; }
+  .bubble {
+    padding: 3px 11px; border-radius: 12px; border: 1px solid #4a4a58;
+    background: rgba(60,60,72,0.85); color: #d5d5e6; font-size: 12px;
+    white-space: nowrap;
+  }
+  .sprite {
+    width: 69.23px; height: 75px;
+    background-image: url("https://persistent.oaistatic.com/codex/pets/v1/codex-spritesheet-v4.webp");
+    background-size: 800% 900%; background-repeat: no-repeat;
+  }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+  button {
+    padding: 8px 18px; border-radius: 9px; border: 1px solid #4a4a58;
+    background: #32323c; color: #e8e8ef; font-size: 13px; cursor: pointer;
+  }
+  button:hover { background: #3d3d49; }
+  button.on { background: #4f46e5; border-color: #6a5cff; }
+  .grid-wrap { overflow-x: auto; }
+  table { border-collapse: collapse; font-size: 12px; }
+  th, td { border: 1px solid #3a3a46; padding: 6px 10px; text-align: center; }
+  th { background: #2c2c36; color: #c8c8dc; }
+  td { color: #b0b0c4; }
+  .note { margin-top: 18px; color: #9a9ab0; font-size: 12px; }
+  code { background: #2c2c36; padding: 1px 6px; border-radius: 5px; }
+</style>
+</head>
+<body>
+  <h1>Codex 桌宠 · 动画预览</h1>
+  <div class="sub">
+    spritesheet 8×9 网格，每帧 192×208；动画表与时长取自 Codex 源码 model.rs。点击按钮切换状态。
+  </div>
+
+  <div class="stage" id="stage"></div>
+
+  <div class="controls" id="controls">
+    <button data-state="idle" class="on">idle（空闲）</button>
+    <button data-state="running">running（思考中）</button>
+    <button data-state="waiting">waiting（需要输入）</button>
+    <button data-state="review">review（就绪）</button>
+    <button data-state="failed">failed（已阻塞）</button>
+  </div>
+
+  <h1>动画表（真源数据）</h1>
+  <div class="grid-wrap">
+    <table>
+      <thead>
+        <tr><th>状态</th><th>行</th><th>帧数</th><th>行时长</th><th>末帧时长</th><th>结构</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>idle</td><td>row0–5</td><td>6</td><td>—</td><td>—</td><td>直接循环，loopStart=0</td></tr>
+        <tr><td>running</td><td>row7</td><td>6</td><td>120ms</td><td>220ms</td><td>状态×3 → idle，loopStart=18</td></tr>
+        <tr><td>waiting</td><td>row6</td><td>6</td><td>150ms</td><td>260ms</td><td>状态×3 → idle，loopStart=18</td></tr>
+        <tr><td>review</td><td>row8</td><td>6</td><td>150ms</td><td>280ms</td><td>状态×3 → idle，loopStart=18</td></tr>
+        <tr><td>failed</td><td>row5</td><td>8</td><td>140ms</td><td>240ms</td><td>状态×3 → idle，loopStart=24</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note">
+    idle 逐帧时长 <code>1680, 660, 660, 840, 840, 1920</code> ms（model.rs idle_animation）。
+    桌宠本体固定高 75px、宽 69.23px，与 Codex <code>PET_TARGET_HEIGHT_PX=75</code> 对齐。
+  </div>
+
+<script>
+  const COLS = 8, ROWS = 9;
+  const IDLE_FRAMES = [[0,1680],[1,660],[2,660],[3,840],[4,840],[5,1920]];
+
+  function appStateAnimation(rowIndex, frameCount, frameDurationMs, finalFrameDurationMs) {
+    const primary = [];
+    for (let col = 0; col < frameCount; col++) {
+      const idx = rowIndex * COLS + col;
+      const dur = col === frameCount - 1 ? finalFrameDurationMs : frameDurationMs;
+      primary.push([idx, dur]);
+    }
+    const frames = [...primary, ...primary, ...primary, ...IDLE_FRAMES];
+    return { frames, loopStart: primary.length * 3 };
+  }
+
+  const ANIMATIONS = {
+    idle:   { frames: IDLE_FRAMES, loopStart: 0 },
+    running: appStateAnimation(7, 6, 120, 220),
+    waiting: appStateAnimation(6, 6, 150, 260),
+    review:  appStateAnimation(8, 6, 150, 280),
+    failed:  appStateAnimation(5, 8, 140, 240),
+  };
+
+  const LABELS = {
+    idle: '空闲', running: '思考中', waiting: '需要输入',
+    review: '就绪', failed: '已阻塞',
+  };
+
+  function totalDuration(frames) {
+    return frames.reduce((s, [, d]) => s + d, 0);
+  }
+  function frameAtElapsed(frames, elapsedMs) {
+    let rem = elapsedMs;
+    for (const [idx, dur] of frames) {
+      const d = Math.max(1, dur);
+      if (rem < d) return idx;
+      rem -= d;
+    }
+    return frames[frames.length - 1][0];
+  }
+  // model.rs current_animation_frame(): prefix once, then loop the tail.
+  function currentFrame(anim, elapsedMs) {
+    const frames = anim.frames;
+    if (frames.length <= 1) return frames[0][0];
+    if (anim.loopStart != null && anim.loopStart < frames.length) {
+      const total = totalDuration(frames);
+      const prefix = totalDuration(frames.slice(0, anim.loopStart));
+      const loop = totalDuration(frames.slice(anim.loopStart));
+      let eff = elapsedMs;
+      if (elapsedMs >= total && loop > 0) eff = prefix + ((elapsedMs - prefix) % loop);
+      return frameAtElapsed(frames, eff);
+    }
+    if (elapsedMs >= totalDuration(frames)) return frames[frames.length - 1][0];
+    return frameAtElapsed(frames, elapsedMs);
+  }
+
+  // Build one pet instance per state so all five animate side by side.
+  const stage = document.getElementById('stage');
+  const states = ['idle', 'running', 'waiting', 'review', 'failed'];
+  const pets = states.map((state) => {
+    const cell = document.createElement('div');
+    cell.className = 'pet-cell';
+    cell.innerHTML =
+      '<div class="bubble">' + LABELS[state] + '</div>' +
+      '<div class="sprite"></div>' +
+      '<div class="pet-label">' + state + '</div>';
+    stage.appendChild(cell);
+    return { state, el: cell.querySelector('.sprite'), start: performance.now() };
+  });
+
+  function paint(pet, now) {
+    const anim = ANIMATIONS[pet.state];
+    const idx = currentFrame(anim, now - pet.start);
+    const row = Math.floor(idx / COLS), col = idx % COLS;
+    pet.el.style.backgroundPosition =
+      ((col / (COLS - 1)) * 100) + '% ' + ((row / (ROWS - 1)) * 100) + '%';
+  }
+
+  function tick(now) {
+    for (const pet of pets) paint(pet, now);
+    requestAnimationFrame(tick);
+  }
+  requestAnimationFrame(tick);
+
+  // Controls highlight the matching cell.
+  document.getElementById('controls').addEventListener('click', (e) => {
+    const btn = e.target.closest('button');
+    if (!btn) return;
+    for (const b of document.querySelectorAll('#controls button')) b.classList.remove('on');
+    btn.classList.add('on');
+    const want = btn.dataset.state;
+    for (const pet of pets) pet.start = performance.now();
+    for (const pet of pets) pet.el.parentElement.parentElement.style.outline =
+      pet.state === want ? '2px solid #6a5cff' : 'none';
+  });
+</script>
+</body>
+</html>
